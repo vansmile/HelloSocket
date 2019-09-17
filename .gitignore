@@ -31,3 +31,4 @@
 *.out
 *.app
 /HelloSocket.VC.VC.opendb
+/.vs
