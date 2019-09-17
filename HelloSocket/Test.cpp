@@ -21,6 +21,7 @@ int main() {
 	///
 		
   //12334
+	//´ò·¨
 	///
 	WSACleanup();
 	return 0;
