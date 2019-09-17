@@ -8,7 +8,10 @@
 #include<stdio.h>
 //#pragma comment(lib,"ws2_32.lib")
 
-
+struct DataPackage {
+	int age;
+	char name[32];
+};
 
 int main() {
 	//启动windows socket 2.x环境
@@ -65,10 +68,10 @@ int main() {
 		}
 		printf("接受到客户端数据[%s]\n", _recvBuf);
 		//	6.处理请求
-		if (0 == strcmp(_recvBuf, "getAge")) {
-			char ageBuf[] = "24";
+		if (0 == strcmp(_recvBuf, "getInfo")) {
+			DataPackage dp = {80,"张晓"};
 			//7.发送
-			send(_cSock, ageBuf, strlen(ageBuf) + 1, 0);    //strlen()+1 发送结尾符
+			send(_cSock, (const char *)&dp, sizeof(DataPackage), 0);    //strlen()+1 发送结尾符
 		}
 		else if (0 == strcmp(_recvBuf, "getName")) {
 			char nameBuf[] = "Fanxiao";

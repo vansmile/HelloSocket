@@ -20,14 +20,7 @@ int main() {
 
 	///
 		
-  //12334
-	//´ò·¨
-	//dafd 
-	//for test3
-	//for test4
-	///for test5
-	//dsafas
-	
+
 	//ÄãºÃ°¡
 	WSACleanup();
 	return 0;

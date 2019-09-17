@@ -8,7 +8,10 @@
 #include<stdio.h>
 #pragma comment(lib,"ws2_32.lib")
 
-
+struct DataPackage {
+	int age;
+	char name[32];
+};
 
 int main() {
 	//启动windows socket 2.x环境
@@ -55,7 +58,7 @@ int main() {
 			break;
 		}
 		else {
-			//5.发送民老公
+			//5.发送命令
 			send(_sock, cmdBuf, strlen(cmdBuf) + 1, 0);
 		}
 
@@ -63,7 +66,8 @@ int main() {
 		char recvBuf[256] = {};
 		int nLen = recv(_sock, recvBuf, 256, 0);
 		if (nLen > 0) {
-			printf("接受到数据【%s】\n", recvBuf);
+			DataPackage* dp = (DataPackage *)recvBuf;
+			printf("接受到数据【%d】[%s]\n", dp->age,dp->name);
 		}
 		else {
 			printf("接受数据失败\n");
