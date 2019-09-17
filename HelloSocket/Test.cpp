@@ -27,7 +27,8 @@ int main() {
 	//for test4
 	///for test5
 	//dsafas
-	//dasd
+	
+	//ÄãºÃ°¡
 	WSACleanup();
 	return 0;
 }
