@@ -8,11 +8,32 @@
 #include<stdio.h>
 #pragma comment(lib,"ws2_32.lib")
 
-struct DataPackage {
-	int age;
-	char name[32];
+enum CMD
+{
+	CMD_LOGIN,
+	CMD_LOGOUT,
+	CMD_ERROR
 };
+struct DataHeader {
+	short datalength;//short 32767;
+	short cmd;
+};
+//Datapackage
+struct Login {
+	char username[32];
+	char password[32];
+};
+struct LoginResult {
+	int result;
 
+};
+struct Logout {
+	char username[32];
+};
+struct LogoutResult {
+	int result;
+
+};
 int main() {
 	//启动windows socket 2.x环境
 	WORD ver = MAKEWORD(2, 2);
@@ -49,6 +70,8 @@ int main() {
 	
 	while (true) {
 		//3.用户输入命令
+	
+
 		char cmdBuf[128] = {};
 		scanf("%s",cmdBuf);
 		//4.处理请求
@@ -57,22 +80,36 @@ int main() {
 
 			break;
 		}
-		else {
+		else if(0 == strcmp(cmdBuf, "login")){
 			//5.发送命令
-			send(_sock, cmdBuf, strlen(cmdBuf) + 1, 0);
+			Login login = {"fx","fx123456"};
+			DataHeader dh = { sizeof(Login),CMD_LOGIN };
+			send(_sock, (const char *)&dh, sizeof(dh), 0);
+			send(_sock,(const char *) &login, sizeof(login), 0);
+			//接收服务器返回数据
+			DataHeader retHeader = {};
+			LoginResult retLogin = {};
+			recv(_sock, (char *)&retHeader, sizeof(retHeader), 0);
+			recv(_sock, (char *)&retLogin, sizeof(retLogin), 0);
+			printf("LoginResult :%d\n", retLogin.result);
 		}
+		else if (0 == strcmp(cmdBuf, "logout")) {
+			Logout logout = {"fx"};
+			DataHeader dh = { sizeof(logout) ,CMD_LOGOUT};
+			send(_sock, (const char *)&dh, sizeof(dh), 0);
+			send(_sock, (const char *)&logout, sizeof(logout), 0);
 
-		//	3.接收服务器信息recv
-		char recvBuf[256] = {};
-		int nLen = recv(_sock, recvBuf, 256, 0);
-		if (nLen > 0) {
-			DataPackage* dp = (DataPackage *)recvBuf;
-			printf("接受到数据【%d】[%s]\n", dp->age,dp->name);
+			DataHeader retHeader = {};
+			LoginResult retLogout = {};
+			recv(_sock, (char *)&retHeader, sizeof(retHeader), 0);
+			recv(_sock, (char *)&retLogout, sizeof(retLogout), 0);
+			printf("LogoutResult :%d\n", retLogout.result);
 		}
 		else {
-			printf("接受数据失败\n");
-
+			printf("不支持的命令，请重新输入。\n");
 		}
+
+
 	}
 	
 

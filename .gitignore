@@ -32,3 +32,6 @@
 *.app
 /HelloSocket.VC.VC.opendb
 /.vs
+
+.suo
+*.db

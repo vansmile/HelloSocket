@@ -8,9 +8,31 @@
 #include<stdio.h>
 //#pragma comment(lib,"ws2_32.lib")
 
-struct DataPackage {
-	int age;
-	char name[32];
+enum CMD
+{
+	CMD_LOGIN,
+	CMD_LOGOUT,
+	CMD_ERROR
+};
+struct DataHeader {
+	short datalength;//short 32767;
+	short cmd;
+};
+//Datapackage
+struct Login {
+	char username[32];
+	char password[32];
+};
+struct LoginResult {
+	int result;
+
+};
+struct Logout {
+	char username[32];
+};
+struct LogoutResult {
+	int result;
+
 };
 
 int main() {
@@ -61,26 +83,46 @@ int main() {
 	char _recvBuf[128] = {};
 	while (true) {
 		//5接收客户端数据
-		int nLen = recv(_cSock, _recvBuf, 128, 0);
+		DataHeader header = {};
+
+		int nLen = recv(_cSock, (char *)&header, sizeof(header), 0);
 		if (nLen <= 0) {
 			printf("客户端退出,任务结束。\n");
 			break;
 		}
-		printf("接受到客户端数据[%s]\n", _recvBuf);
+		printf("收到命令[%d]  数据长度[%d]\n", header.cmd,header.datalength);
+		switch (header.cmd)
+		{
+		case CMD_LOGIN:
+		{
+			Login login = {};
+			recv(_cSock, (char *)&login, sizeof(Login), 0);
+			printf("username[%s] password[%s]", login.username, login.password);
+			//忽略判断用户名密码是否正确的过程
+			LoginResult ret = {0};
+			send(_cSock, (char *)&header, sizeof(DataHeader), 0);
+			send(_cSock, (char *)&ret, sizeof(LoginResult), 0);
+		}
+			break;
+		case CMD_LOGOUT: {
+			Logout logout = {};
+			recv(_cSock, (char *)&logout, sizeof(Logout), 0);
+			//忽略判断用户名密码是否正确的过程
+			LogoutResult ret = { 1};
+			send(_cSock, (char *)&header, sizeof(DataHeader), 0);
+			send(_cSock, (char *)&ret, sizeof(LogoutResult), 0);
+		}
+			break;
+		default: {
+			header.cmd = CMD_ERROR;
+			header.datalength = 0;
+			send(_cSock, (char *)&header, sizeof(header), 0);
+
+		}
+			break;
+		}
 		//	6.处理请求
-		if (0 == strcmp(_recvBuf, "getInfo")) {
-			DataPackage dp = {80,"张晓"};
-			//7.发送
-			send(_cSock, (const char *)&dp, sizeof(DataPackage), 0);    //strlen()+1 发送结尾符
-		}
-		else if (0 == strcmp(_recvBuf, "getName")) {
-			char nameBuf[] = "Fanxiao";
-			send(_cSock, nameBuf, strlen(nameBuf) + 1, 0);    //strlen()+1 发送结尾符
-		}
-		else {
-			char msgBuf[] = "Hello,I'm Server.???What do you want to do?";
-			send(_cSock, msgBuf, strlen(msgBuf) + 1, 0);    //strlen()+1 发送结尾符
-		}
+		
 		
 		
 	}
