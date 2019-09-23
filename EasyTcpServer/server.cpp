@@ -6,6 +6,7 @@
 #include<Windows.h>
 #include<WinSock2.h>
 #include<stdio.h>
+#include <vector>
 //#pragma comment(lib,"ws2_32.lib")
 
 enum CMD
@@ -56,6 +57,57 @@ struct LogoutResult :public DataHeader {
 	int result;
 
 };
+std::vector<SOCKET>g_clients;
+
+int processor(SOCKET _cSock) {
+	//缓冲区
+	char szRecv[1024] = {};
+	//5接收客户端数据
+	int nLen = recv(_cSock, szRecv, sizeof(DataHeader), 0);
+	DataHeader* header = (DataHeader*)szRecv;
+	if (nLen <= 0) {
+		printf("客户端退出,任务结束。\n");
+		return -1;
+	}
+	//if(nLen >= header->datalength) //现不判断
+
+
+	switch (header->cmd)
+	{
+	case CMD_LOGIN:
+	{
+		recv(_cSock, szRecv + sizeof(DataHeader), header->datalength - sizeof(DataHeader), 0);
+		Login* login = (Login*)szRecv;
+		printf("收到命令[%d]  数据长度[%d]\n", login->cmd, login->datalength);
+		printf("username[%s] password[%s]\n", login->username, login->password);
+		//忽略判断用户名密码是否正确的过程
+		LoginResult ret;
+		send(_cSock, (char *)&ret, sizeof(LoginResult), 0);
+	}
+	break;
+	case CMD_LOGOUT: {
+		recv(_cSock, szRecv + sizeof(DataHeader), sizeof(Logout) - sizeof(DataHeader), 0);
+		Logout* logout = (Logout*)szRecv;
+		printf("收到命令[%d]  数据长度[%d]\n", logout->cmd, logout->datalength);
+		printf("username[%s]\n", logout->username);
+		//忽略判断用户名密码是否正确的过程
+		LogoutResult ret;
+		send(_cSock, (char *)&ret, sizeof(LogoutResult), 0);
+	}
+					 break;
+	default: {
+		DataHeader header = { 0,CMD_ERROR };
+		/*		header.cmd = CMD_ERROR;
+		header.datalength = 0;*/
+		send(_cSock, (char *)&header, sizeof(header), 0);
+
+	}
+			 break;
+	}
+	//	6.处理请求
+
+}
+
 
 int main() {
 	//启动windows socket 2.x环境
@@ -92,71 +144,75 @@ int main() {
 		printf("监听网络端口成功...\n");
 
 	}
-	//	4.等待接受客户端连接 accept
-	sockaddr_in clientAddr = {};
-	int nAddrLen = sizeof(sockaddr_in);
-	SOCKET	_cSock = INVALID_SOCKET;
-	_cSock = accept(_sock, (sockaddr*)&clientAddr, &nAddrLen);
-	if (INVALID_SOCKET == _cSock) {
-		printf("错误，接受到无效客户端SOCKET...\n");
-	}
 	
-	printf("新客户端加入：socket =  %d, IP:%s\n", (int)_cSock,inet_ntoa(clientAddr.sin_addr));
-	char _recvBuf[128] = {};
+	//char _recvBuf[128] = {};
 	while (true) {
-		//5接收客户端数据
+
+		//伯克利socket 描述符
+		fd_set fdRead;
+		fd_set fdWrite;
+		fd_set fdExcept;
+		FD_ZERO(&fdRead);
+		FD_ZERO(&fdWrite);
+		FD_ZERO(&fdExcept);
+
+		FD_SET(_sock, &fdRead);
+		FD_SET(_sock, &fdWrite);
+		FD_SET(_sock, &fdExcept);
+		for (int n = g_clients.size() - 1; n >= 0; n--) {
+			//放在可读查询中看看有无新的数据需要接收
+			FD_SET(g_clients[n], &fdRead);
+
+		}
 		
+		//nfds是一个整数值，是指fd_set集合中所有描述符(socket)的范围，而不是数量
+		//即是所有文件描述符最大值+1,再Windows中这个参数可以写0
 
-		//缓冲区
-		char szRecv[1024] = {};
+		timeval t = {0,0};
+				
+		//int ret = select(_sock + 1, &fdRead, &fdWrite, &fdExcept, NULL);
+		int ret = select(_sock + 1, &fdRead, &fdWrite, &fdExcept, &t);
 
-		int nLen = recv(_cSock, szRecv, sizeof(DataHeader), 0);
-		DataHeader* header = (DataHeader*)szRecv;
-		if (nLen <= 0) {
-			printf("客户端退出,任务结束。\n");
+		//NULL阻塞的 ，若无客户端  则不会向下执行----
+		//若还需主动向客户端通信，则定义TIMEOUT
+		if (ret < 0) {
+			printf("Select任务结束。\n");
 			break;
 		}
-		//if(nLen >= header->datalength) //现不判断
 
+		if (FD_ISSET(_sock, &fdRead)) {
+			FD_CLR(_sock, &fdRead);
+			//	4.等待接受客户端连接 accept
+			sockaddr_in clientAddr = {};
+			int nAddrLen = sizeof(sockaddr_in);
+			SOCKET	_cSock = INVALID_SOCKET;
+			_cSock = accept(_sock, (sockaddr*)&clientAddr, &nAddrLen);
+			if (INVALID_SOCKET == _cSock) {
+				printf("错误，接受到无效客户端SOCKET...\n");
+			}
+			g_clients.push_back(_cSock);
 
-		switch (header->cmd)
-		{
-		case CMD_LOGIN:
-		{
-			recv(_cSock,szRecv + sizeof(DataHeader), header->datalength - sizeof(DataHeader), 0);
-			Login* login = (Login*)szRecv;
-			printf("收到命令[%d]  数据长度[%d]\n", login->cmd, login->datalength);
-			printf("username[%s] password[%s]\n", login->username, login->password);
-			//忽略判断用户名密码是否正确的过程
-			LoginResult ret;
-			send(_cSock, (char *)&ret, sizeof(LoginResult), 0);
+			printf("新客户端加入：socket =  %d, IP:%s\n", (int)_cSock, inet_ntoa(clientAddr.sin_addr));
 		}
-			break;
-		case CMD_LOGOUT: {
-			recv(_cSock, szRecv + sizeof(DataHeader), sizeof(Logout) - sizeof(DataHeader), 0);
-			Logout* logout = (Logout*)szRecv;
-			printf("收到命令[%d]  数据长度[%d]\n", logout->cmd, logout->datalength);
-			printf("username[%s]\n", logout->username);
-			//忽略判断用户名密码是否正确的过程
-			LogoutResult ret;
-			send(_cSock, (char *)&ret, sizeof(LogoutResult), 0);
-		}
-			break;
-		default: {
-			DataHeader header = {0,CMD_ERROR};
-	/*		header.cmd = CMD_ERROR;
-			header.datalength = 0;*/
-			send(_cSock, (char *)&header, sizeof(header), 0);
+		for (int n = 0; n < fdRead.fd_count ; n++) {
+			if (-1 == processor(fdRead.fd_array[n])) {
+				auto iter = find(g_clients.begin(), g_clients.end(), fdRead.fd_array[n]);
+				if (iter != g_clients.end()) {
+					g_clients.erase(iter);
+				}
+			}
+			
 
 		}
-			break;
-		}
-		//	6.处理请求
 		
 		
 		
 	}
+	for (int n = g_clients.size() - 1; n >= 0; n--) {
+		//放在可读查询中看看有无新的数据需要接收
+		closesocket(g_clients[n]);
 
+	}
 
 	//	8.关闭sokcet  close
 	closesocket(_sock);
