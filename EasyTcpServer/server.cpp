@@ -15,6 +15,7 @@ enum CMD
 	CMD_LOGIN_RESULT,
 	CMD_LOGOUT,
 	CMD_LOGOUT_RESULT,
+	CMD_NEW_USER_JOIN,
 	CMD_ERROR
 };
 struct DataHeader {
@@ -57,6 +58,16 @@ struct LogoutResult :public DataHeader {
 	int result;
 
 };
+
+struct  NewUserJoin:public DataHeader
+{
+	NewUserJoin() {
+		datalength = sizeof(NewUserJoin);
+		cmd = CMD_NEW_USER_JOIN;
+		sock = 0;
+	}
+	int sock;
+};
 std::vector<SOCKET>g_clients;
 
 int processor(SOCKET _cSock) {
@@ -66,7 +77,7 @@ int processor(SOCKET _cSock) {
 	int nLen = recv(_cSock, szRecv, sizeof(DataHeader), 0);
 	DataHeader* header = (DataHeader*)szRecv;
 	if (nLen <= 0) {
-		printf("客户端退出,任务结束。\n");
+		printf("客户端<Socket = %d>退出,任务结束。\n",_cSock);
 		return -1;
 	}
 	//if(nLen >= header->datalength) //现不判断
@@ -78,7 +89,7 @@ int processor(SOCKET _cSock) {
 	{
 		recv(_cSock, szRecv + sizeof(DataHeader), header->datalength - sizeof(DataHeader), 0);
 		Login* login = (Login*)szRecv;
-		printf("收到命令[%d]  数据长度[%d]\n", login->cmd, login->datalength);
+		printf("收到客户端<Socket = %d>    请求命令[%d]  数据长度[%d]\n",_cSock, login->cmd, login->datalength);
 		printf("username[%s] password[%s]\n", login->username, login->password);
 		//忽略判断用户名密码是否正确的过程
 		LoginResult ret;
@@ -88,7 +99,7 @@ int processor(SOCKET _cSock) {
 	case CMD_LOGOUT: {
 		recv(_cSock, szRecv + sizeof(DataHeader), sizeof(Logout) - sizeof(DataHeader), 0);
 		Logout* logout = (Logout*)szRecv;
-		printf("收到命令[%d]  数据长度[%d]\n", logout->cmd, logout->datalength);
+		printf("收到客户端<Socket = %d> 请求命令[%d]  数据长度[%d]\n",  _cSock, logout->cmd, logout->datalength);
 		printf("username[%s]\n", logout->username);
 		//忽略判断用户名密码是否正确的过程
 		LogoutResult ret;
@@ -190,6 +201,12 @@ int main() {
 			if (INVALID_SOCKET == _cSock) {
 				printf("错误，接受到无效客户端SOCKET...\n");
 			}
+			for (int n = g_clients.size() - 1; n >= 0; n--) {
+				//向其他客户端发送消息
+				NewUserJoin userJoin;
+				send(g_clients[n], (const char*)&userJoin, sizeof(NewUserJoin), 0);
+			}
+
 			g_clients.push_back(_cSock);
 
 			printf("新客户端加入：socket =  %d, IP:%s\n", (int)_cSock, inet_ntoa(clientAddr.sin_addr));
@@ -201,11 +218,9 @@ int main() {
 					g_clients.erase(iter);
 				}
 			}
-			
-
 		}
 		
-		
+		printf("空闲时间处理其他业务..\n");
 		
 	}
 	for (int n = g_clients.size() - 1; n >= 0; n--) {
