@@ -6,6 +6,7 @@
 #include<Windows.h>
 #include<WinSock2.h>
 #include<stdio.h>
+#include<thread>
 #pragma comment(lib,"ws2_32.lib")
 
 enum CMD
@@ -67,7 +68,7 @@ struct  NewUserJoin :public DataHeader
 	}
 	int sock;
 };
-
+bool g_bRun = true;
 int processor(SOCKET _cSock) {
 	//缓冲区
 	char szRecv[1024] = {};
@@ -75,6 +76,7 @@ int processor(SOCKET _cSock) {
 	int nLen = recv(_cSock, szRecv, sizeof(DataHeader), 0);
 	DataHeader* header = (DataHeader*)szRecv;
 	if (nLen <= 0) {
+		
 		printf("与服务器断开链接,任务结束。\n");
 		return -1;
 	}
@@ -87,19 +89,19 @@ int processor(SOCKET _cSock) {
 	{
 		recv(_cSock, szRecv + sizeof(DataHeader), header->datalength - sizeof(DataHeader), 0);
 		LoginResult* loginret = (LoginResult*)szRecv;
-		printf("收到服务端消息：CMD_LOGIN_RESULT,数据结果[%d],数据长度【%d】",loginret->result,loginret->datalength);
+		printf("收到服务端消息：CMD_LOGIN_RESULT,数据结果[%d],数据长度【%d】\n",loginret->result,loginret->datalength);
 	}
 	break;
 	case CMD_LOGOUT_RESULT :{
 		recv(_cSock, szRecv + sizeof(DataHeader), header->datalength - sizeof(DataHeader), 0);
 		LogoutResult* logoutret = (LogoutResult*)szRecv;
-		printf("收到服务端消息：CMD_LOGOUT_RESULT,数据结果[%d],数据长度【%d】", logoutret->result, logoutret->datalength);
+		printf("收到服务端消息：CMD_LOGOUT_RESULT,数据结果[%d],数据长度【%d】\n", logoutret->result, logoutret->datalength);
 	}
 	break;
 	case CMD_NEW_USER_JOIN: {
 		recv(_cSock, szRecv + sizeof(DataHeader), header->datalength - sizeof(DataHeader), 0);
 		NewUserJoin* userjoin = (NewUserJoin*)szRecv;
-		printf("收到服务端消息：CMD_NEW_USER_JOIN,加入客户端socket[%d],数据长度【%d】", userjoin->sock, userjoin->datalength);
+		printf("收到服务端消息：CMD_NEW_USER_JOIN,加入客户端socket[%d],数据长度【%d】\n", userjoin->sock, userjoin->datalength);
 	}
 	default: {
 	}
@@ -108,6 +110,34 @@ int processor(SOCKET _cSock) {
 	//	6.处理请求
 
 }
+
+
+void cmdThread(SOCKET _sock) {
+
+	while (true) {
+		char cmdBuf[256] = {};
+
+		scanf("%s", cmdBuf);
+		if (0 == strcmp(cmdBuf, "exit")) {
+			g_bRun = false;
+			printf("退出CmdThread线程..\n");
+			return;
+		}
+		else if (0 == strcmp(cmdBuf, "login")) {
+			Login login;
+			strcpy(login.username, "fanxiao");
+			strcpy(login.password, "nihaoa");
+			send(_sock, (const char *)&login, sizeof(login), 0);
+		}
+		else if (0 == strcmp(cmdBuf, "logout")) {
+			Logout logout;
+			strcpy(logout.username, "fanxiao");
+			send(_sock, (const char *)&logout, sizeof(logout), 0);
+		}
+	}
+	
+}
+
 
 int main() {
 	//启动windows socket 2.x环境
@@ -143,11 +173,14 @@ int main() {
 		printf("连接成功\n");
 	}
 	
-	while (true) {
+	std::thread t1(cmdThread,_sock);
+	t1.detach();
+
+	while (g_bRun) {
 		fd_set fdReads;
 		FD_ZERO(&fdReads);
 		FD_SET(_sock, &fdReads);    //加入要查询的数据
-		timeval t = {0,0 };
+		timeval t = {1,0 };
 		int ret = select(_sock, &fdReads, NULL, NULL, &t);
 		if (ret < 0) {
 			printf("Select任务结束1\n");
@@ -161,11 +194,10 @@ int main() {
 			}
 			
 		}
-		printf("空闲时间处理其他业务..\n");
-		Login login;
-		strcpy(login.username, "fanxiao");
-		strcpy(login.password ,"nihaoa");
-		send(_sock, (const char *)&login, sizeof(login), 0);
+
+	
+		//printf("空闲时间处理其他业务..\n");
+		
 
 	}
 	

@@ -159,15 +159,15 @@ int main() {
 	//char _recvBuf[128] = {};
 	while (true) {
 
-		//伯克利socket 描述符
-		fd_set fdRead;
+		//伯克利套接字 BDS 描述符
+		fd_set fdRead;     //描述符(socket)集合
 		fd_set fdWrite;
 		fd_set fdExcept;
-		FD_ZERO(&fdRead);
+		FD_ZERO(&fdRead);   //清零集合
 		FD_ZERO(&fdWrite);
 		FD_ZERO(&fdExcept);
 
-		FD_SET(_sock, &fdRead);
+		FD_SET(_sock, &fdRead);   //将描述符(socket)加入集合中
 		FD_SET(_sock, &fdWrite);
 		FD_SET(_sock, &fdExcept);
 		for (int n = g_clients.size() - 1; n >= 0; n--) {
@@ -179,7 +179,7 @@ int main() {
 		//nfds是一个整数值，是指fd_set集合中所有描述符(socket)的范围，而不是数量
 		//即是所有文件描述符最大值+1,再Windows中这个参数可以写0
 
-		timeval t = {0,0};
+		timeval t = {1,0};
 				
 		//int ret = select(_sock + 1, &fdRead, &fdWrite, &fdExcept, NULL);
 		int ret = select(_sock + 1, &fdRead, &fdWrite, &fdExcept, &t);
@@ -191,6 +191,7 @@ int main() {
 			break;
 		}
 
+		//判断描述符(socket)是否在集合中
 		if (FD_ISSET(_sock, &fdRead)) {
 			FD_CLR(_sock, &fdRead);
 			//	4.等待接受客户端连接 accept
@@ -201,15 +202,18 @@ int main() {
 			if (INVALID_SOCKET == _cSock) {
 				printf("错误，接受到无效客户端SOCKET...\n");
 			}
-			for (int n = g_clients.size() - 1; n >= 0; n--) {
-				//向其他客户端发送消息
-				NewUserJoin userJoin;
-				send(g_clients[n], (const char*)&userJoin, sizeof(NewUserJoin), 0);
+			else {
+				for (int n = g_clients.size() - 1; n >= 0; n--) {
+					//向其他客户端发送消息
+					NewUserJoin userJoin;
+					send(g_clients[n], (const char*)&userJoin, sizeof(NewUserJoin), 0);
+				}
+
+				g_clients.push_back(_cSock);
+
+				printf("新客户端加入：socket =  %d, IP:%s\n", (int)_cSock, inet_ntoa(clientAddr.sin_addr));
 			}
-
-			g_clients.push_back(_cSock);
-
-			printf("新客户端加入：socket =  %d, IP:%s\n", (int)_cSock, inet_ntoa(clientAddr.sin_addr));
+			
 		}
 		for (int n = 0; n < fdRead.fd_count ; n++) {
 			if (-1 == processor(fdRead.fd_array[n])) {
@@ -220,7 +224,7 @@ int main() {
 			}
 		}
 		
-		printf("空闲时间处理其他业务..\n");
+		//printf("空闲时间处理其他业务..\n");
 		
 	}
 	for (int n = g_clients.size() - 1; n >= 0; n--) {
