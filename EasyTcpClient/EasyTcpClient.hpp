@@ -30,7 +30,7 @@ public:
 		Close();
 	}
 	//初始化socket
-	void initSocket() {
+	void InitSocket() {
 		//启动win sock 2.x环境
 #ifdef _WIN32
 		WORD ver = MAKEWORD(2, 2);
@@ -54,7 +54,7 @@ public:
 		//	2.连接服务器connect
 
 		if (INVALID_SOCKET == _sock) {
-			initSocket();
+			InitSocket();
 		}
 
 		sockaddr_in _sin = {};
@@ -110,7 +110,6 @@ public:
 
 					return false;
 				}
-
 			}
 			return true;
 		}
@@ -143,7 +142,7 @@ public:
 	}
 
 	//响应网络消息
-	void OnNetMsg(DataHeader* header) {
+	virtual void OnNetMsg(DataHeader* header) {
 	
 		switch (header->cmd)
 		{
