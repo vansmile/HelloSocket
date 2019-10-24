@@ -88,17 +88,18 @@ public:
 		}
 
 	}
-	
+	int _nCount = 0;
 	//查询网络消息
 	bool OnRun() {
 		if (isRun()) {
 			fd_set fdReads;
 			FD_ZERO(&fdReads);
 			FD_SET(_sock, &fdReads);    //加入要查询的数据
-			timeval t = { 1,0 };
+			timeval t = { 0,0 };
 			int ret = select(_sock, &fdReads, NULL, NULL, &t);
+			//printf("select ret = %d count = %d\n", ret, _nCount++);
 			if (ret < 0) {
-				printf("<socket = %d>Select任务结束1\n", _sock);
+				//printf("<socket = %d>Select任务结束1\n", _sock);
 				Close();
 				return false;
 			}
@@ -120,23 +121,62 @@ public:
 	bool isRun() {
 		return _sock != INVALID_SOCKET;
 	}
-	
+
+	//缓冲区最小单元大小
+#define RECV_BUFF_SIZE 10240
+	//接收缓冲区
+	char _szRecv[RECV_BUFF_SIZE] = {};
+
+	//第二缓冲区  消息缓冲区
+	char _szMsgBuf[RECV_BUFF_SIZE * 10] = {};
+	//消息缓冲区的数据尾部位置
+	int _lastPos = 0;
+
 	//接收数据   //处理粘包，拆分包
-	int RecvData(SOCKET _cSock) {
+	int RecvData(SOCKET cSock) {
 		//缓冲区
-		char szRecv[1024] = {};
-		//5接收服务器数据
-		int nLen = recv(_cSock, szRecv, sizeof(DataHeader), 0);
-		DataHeader* header = (DataHeader*)szRecv;
+	
+		//5接收数据
+		int nLen = recv(cSock, _szRecv, RECV_BUFF_SIZE, 0);
+		//printf("nLen = %d\n", nLen);
 		if (nLen <= 0) {
 
-			printf("<socket = %d>与服务器断开链接,任务结束。\n",_sock);
+			printf("<socket = %d>与服务器断开链接,任务结束。\n", cSock);
 			return -1;
 		}
 
-		recv(_cSock, szRecv + sizeof(DataHeader), header->datalength - sizeof(DataHeader), 0);
-		OnNetMsg(header);
+		//将收取到的数据拷贝到消息缓冲区
+		memcpy(_szMsgBuf + _lastPos, _szRecv,nLen);
+		///消息缓冲区的数据尾部位置后移
+		_lastPos += nLen;
+		//判断消息缓冲区的数据长度大于消息头Dataheader长度
+		
 
+		//解决少包与粘包问题
+		while (_lastPos >= sizeof(DataHeader)) {
+			//这时就可以知道当前消息的长度
+			DataHeader* header = (DataHeader*)_szMsgBuf;
+			//判断消息缓冲区的数据长度大于消息长度
+			if (_lastPos >= header->datalength) {
+				//消息缓冲区剩余未处理数据的长度
+				int nSize =_lastPos - header->datalength;
+				//处理网络消息
+				OnNetMsg(header);
+				//将消息缓冲区剩余未处理数据前移
+				memcpy(_szMsgBuf, _szMsgBuf + header->datalength, nSize);
+				///消息缓冲区的数据尾部位置前移
+				_lastPos = nSize;
+			}
+			else {
+				//消息缓冲区剩余数据不够一条完整消息
+				break;
+			}
+		}
+
+		//
+		//recv(_cSock, szRecv + sizeof(DataHeader), header->datalength - sizeof(DataHeader), 0);
+		//
+		return 0;
 		//if(nLen >= header->datalength) //现不判断
 
 	}
@@ -161,7 +201,14 @@ public:
 			NewUserJoin* userjoin = (NewUserJoin*)header;
 			printf("<socket = %d>收到服务端消息：CMD_NEW_USER_JOIN,加入客户端socket[%d],数据长度【%d】\n", _sock, userjoin->sock, userjoin->datalength);
 		}
+								break;
+		case CMD_ERROR: {
+			printf("<socket = %d>收到服务端消息：CMD_ERROR,加入客户端socket[%d],数据长度【%d】\n", _sock, header->datalength);
+		}
+						break;
 		default: {
+			printf("<socket = %d>收到未定义消息加入客户端socket[%d],数据长度【%d】\n", _sock, header->datalength);
+
 		}
 				 break;
 		}

@@ -69,12 +69,14 @@ public:
 		sockaddr_in _sin = {};
 		_sin.sin_family = AF_INET;
 		_sin.sin_port = htons(port);   //host to net unsigned short
+
 #ifdef _WIN32
 		if (ip) {
 			_sin.sin_addr.S_un.S_addr = inet_addr(ip);// ;
 		}
 		else {
 			_sin.sin_addr.S_un.S_addr = INADDR_ANY;// inet_addr("127.0.0.1");
+
 		}
 #else
 		if (ip) {
@@ -157,7 +159,7 @@ public:
 		}
 	}
 
-
+	int _nCount = 0;
 	//处理网络消息
 	bool OnRun() {
 		if (isRun()) {
@@ -177,6 +179,7 @@ public:
 				FD_SET(g_clients[n], &fdRead);
 
 			}
+			
 
 			//nfds是一个整数值，是指fd_set集合中所有描述符(socket)的范围，而不是数量
 			//即是所有文件描述符最大值+1,再Windows中这个参数可以写0
@@ -185,6 +188,8 @@ public:
 
 			//int ret = select(_sock + 1, &fdRead, &fdWrite, &fdExcept, NULL);
 			int ret = select(_sock + 1, &fdRead, &fdWrite, &fdExcept, &t);
+			printf("select ret = %d count = %d\n", ret, _nCount++);
+
 
 			//NULL阻塞的 ，若无客户端  则不会向下执行----
 			//若还需主动向客户端通信，则定义TIMEOUT
@@ -221,21 +226,25 @@ public:
 		return _sock != INVALID_SOCKET;
 	}
 	//接收数据
+	char szRecv[409600] = {};
+
 	int RecvData(SOCKET _cSock) {
 		//缓冲区
-		char szRecv[1024] = {};
 		//5接收客户端数据
-		int nLen = recv(_cSock, szRecv, sizeof(DataHeader), 0);
-		DataHeader* header = (DataHeader*)szRecv;
-		if (nLen <= 0) {
-			printf("客户端<Socket = %d>退出,任务结束。\n", _cSock);
-			return -1;
-		}
-		//if(nLen >= header->datalength) //现不判断
-		recv(_cSock, szRecv + sizeof(DataHeader), header->datalength - sizeof(DataHeader), 0);
+		int nLen = recv(_cSock, szRecv, 409600, 0);
+		printf("nLen = %d\n", nLen);
+		LoginResult ret;
+		SendData(_cSock, &ret);
+		//DataHeader* header = (DataHeader*)szRecv;
+		//if (nLen <= 0) {
+		//	printf("客户端<Socket = %d>退出,任务结束。\n", _cSock);
+		//	return -1;
+		//}
+		////if(nLen >= header->datalength) //现不判断
+		//recv(_cSock, szRecv + sizeof(DataHeader), header->datalength - sizeof(DataHeader), 0);
 
-		
-		OnNetMsg(_cSock, header);
+		//printf("收到客户端<Socket = %d>    请求命令[%d]  数据长度[%d]\n", _cSock, header->cmd, header->datalength);
+		//OnNetMsg(_cSock, header);
 		return 0;
 	}
 	//响应网络消息
@@ -244,13 +253,12 @@ public:
 		{
 		case CMD_LOGIN:
 		{
-			
 			Login* login = (Login*)header;
-			printf("收到客户端<Socket = %d>    请求命令[%d]  数据长度[%d]\n", _cSock, header->cmd, header->datalength);
 			printf("username[%s] password[%s]\n", login->username, login->password);
 			//忽略判断用户名密码是否正确的过程
 			LoginResult ret;
-			send(_cSock, (char *)&ret, sizeof(LoginResult), 0);
+			SendData(_cSock, &ret);
+			
 		}
 		break;
 		case CMD_LOGOUT: {
@@ -258,14 +266,14 @@ public:
 			printf("username[%s]\n", logout->username);
 			//忽略判断用户名密码是否正确的过程
 			LogoutResult ret;
-			send(_cSock, (char *)&ret, sizeof(LogoutResult), 0);
+			SendData(_cSock, &ret);
 		}
 						 break;
 		default: {
 			DataHeader header = { 0,CMD_ERROR };
 			/*		header.cmd = CMD_ERROR;
 			header.datalength = 0;*/
-			send(_cSock, (char *)&header, sizeof(header), 0);
+			SendData(_cSock, &header);
 
 		}
 				 break;

@@ -35,15 +35,22 @@ int main() {
 	EasyTcpClient client;
 	//client.initSocket();
 	client.Connect("127.0.0.1", 4567);
+	//client.Connect("118.24.240.141", 4567);
+
+	/*EasyTcpClient client2;
+	client2.Connect("127.0.0.1", 4567);*/
 
 
 	//启动UI线程
-	std::thread t1(cmdThread,&client);
-	t1.detach();
-;
+	//std::thread t1(cmdThread,&client);
+	//t1.detach();
+
+	Login login;
+	strcpy(login.username, "fanxiao");
+	strcpy(login.password, "fanxiaomima");
 	while (client.isRun()) {
 		client.OnRun();
-
+		client.SendData(&login);
 		//printf("空闲时间处理其他业务..\n");
 		
 
