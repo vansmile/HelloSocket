@@ -11,9 +11,15 @@ enum CMD
 	CMD_ERROR
 };
 struct DataHeader {
+	DataHeader() {
+		datalength = sizeof(datalength);
+		cmd = CMD_ERROR;
+	}
 	short datalength;//short 32767;
 	short cmd;
 };
+//Datapackage
+//继承或者直接将Dataheader写在内部
 //Datapackage
 //继承或者直接将Dataheader写在内部
 struct Login :public DataHeader {
@@ -23,6 +29,7 @@ struct Login :public DataHeader {
 	}
 	char username[32];
 	char password[32];
+	char data[932];
 };
 struct LoginResult :public DataHeader {
 	LoginResult() {
@@ -31,8 +38,7 @@ struct LoginResult :public DataHeader {
 		result = 0;
 	}
 	int result;
-	char data[1024];  //1kb
-
+	char data[992];  //1kb
 };
 struct Logout :public DataHeader {
 	Logout() {

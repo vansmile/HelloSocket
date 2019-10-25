@@ -121,9 +121,13 @@ public:
 	bool isRun() {
 		return _sock != INVALID_SOCKET;
 	}
-
-	//缓冲区最小单元大小
+//缓冲区最小单元大小
+#ifndef RECV_BUFF_SIZE
 #define RECV_BUFF_SIZE 10240
+#endif // !RECV_BUFF_SIZE
+
+
+
 	//接收缓冲区
 	char _szRecv[RECV_BUFF_SIZE] = {};
 
@@ -189,17 +193,17 @@ public:
 		case CMD_LOGIN_RESULT:
 		{
 			LoginResult* loginret = (LoginResult*)header;
-			printf("<socket = %d>收到服务端消息：CMD_LOGIN_RESULT,数据结果[%d],数据长度【%d】\n", _sock,loginret->result, loginret->datalength);
+			//printf("<socket = %d>收到服务端消息：CMD_LOGIN_RESULT,数据结果[%d],数据长度【%d】\n", _sock,loginret->result, loginret->datalength);
 		}
 		break;
 		case CMD_LOGOUT_RESULT: {		
 			LogoutResult* logoutret = (LogoutResult*)header;
-			printf("<socket = %d>收到服务端消息：CMD_LOGOUT_RESULT,数据结果[%d],数据长度【%d】\n", _sock, logoutret->result, logoutret->datalength);
+			//printf("<socket = %d>收到服务端消息：CMD_LOGOUT_RESULT,数据结果[%d],数据长度【%d】\n", _sock, logoutret->result, logoutret->datalength);
 		}
 								break;
 		case CMD_NEW_USER_JOIN: {
 			NewUserJoin* userjoin = (NewUserJoin*)header;
-			printf("<socket = %d>收到服务端消息：CMD_NEW_USER_JOIN,加入客户端socket[%d],数据长度【%d】\n", _sock, userjoin->sock, userjoin->datalength);
+			//printf("<socket = %d>收到服务端消息：CMD_NEW_USER_JOIN,加入客户端socket[%d],数据长度【%d】\n", _sock, userjoin->sock, userjoin->datalength);
 		}
 								break;
 		case CMD_ERROR: {

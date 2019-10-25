@@ -1,62 +1,64 @@
 
 #include "EasyTcpClient.hpp"
 #include <thread>
-
-void cmdThread(EasyTcpClient* client) {
+bool g_bRun = true;
+void cmdThread() {
 
 	while (true) {
 		char cmdBuf[256] = {};
 
 		scanf("%s", cmdBuf);
 		if (0 == strcmp(cmdBuf, "exit")) {
-			
-			client->Close();
 			printf("退出CmdThread线程..\n");
+			g_bRun = false;
 			return;
 		}
-		else if (0 == strcmp(cmdBuf, "login")) {
-			Login login;
-			strcpy(login.username, "fanxiao");
-			strcpy(login.password, "nihaoa");
-			client->SendData(&login);
+		else {
+			printf("不支持的命令。\n");
 		}
-		else if (0 == strcmp(cmdBuf, "logout")) {
-			Logout logout;
-			strcpy(logout.username, "fanxiao");
-			client->SendData(&logout);
-		}
+		
 	}
 	
 }
 
 
 int main() {
-
-	EasyTcpClient client;
+	const int cCount = FD_SETSIZE - 1;
+	EasyTcpClient* client[cCount];
+	//栈内存
+	//EasyTcpClient client;
 	//client.initSocket();
-	client.Connect("127.0.0.1", 4567);
+	for (int i = 0; i < cCount; i++) {
+		client[i] = new EasyTcpClient();
+		client[i]->Connect("127.0.0.1", 4567);
+	}
+	/*client.Connect("127.0.0.1", 4567);*/
 	//client.Connect("118.24.240.141", 4567);
 
-	/*EasyTcpClient client2;
-	client2.Connect("127.0.0.1", 4567);*/
 
 
 	//启动UI线程
-	//std::thread t1(cmdThread,&client);
-	//t1.detach();
+	std::thread t1(cmdThread);
+	t1.detach();
 
 	Login login;
 	strcpy(login.username, "fanxiao");
 	strcpy(login.password, "fanxiaomima");
-	while (client.isRun()) {
-		client.OnRun();
-		client.SendData(&login);
-		//printf("空闲时间处理其他业务..\n");
-		
+	while (g_bRun) {
+		//
+		//client.SendData(&login);
+		for (int i = 0; i < cCount; i++) {
+			
+			client[i]->SendData(&login);
+			client[i]->OnRun();
+		}
 
+		//printf("空闲时间处理其他业务..\n");
 	}
-	
-	client.Close();
+	for (int i = 0; i < cCount; i++) {
+		client[i]->Close();
+		delete client[i];
+	}
 	printf("已退出，任务结束\n");
 
 	getchar();
