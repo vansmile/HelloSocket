@@ -23,13 +23,16 @@ void cmdThread() {
 
 
 int main() {
-	const int cCount = FD_SETSIZE - 1;
+	const int cCount = 1000;
 	EasyTcpClient* client[cCount];
 	//Õ»ÄÚ´æ
 	//EasyTcpClient client;
 	//client.initSocket();
 	for (int i = 0; i < cCount; i++) {
 		client[i] = new EasyTcpClient();
+		if (!g_bRun) {
+			return 0;
+		}
 		client[i]->Connect("127.0.0.1", 4567);
 	}
 	/*client.Connect("127.0.0.1", 4567);*/

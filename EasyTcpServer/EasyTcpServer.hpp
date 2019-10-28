@@ -5,6 +5,7 @@
 
 
 #ifdef _WIN32
+#define FD_SETSIZE  10000
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <WinSock2.h>
@@ -21,7 +22,7 @@
 #include <stdio.h>
 #include <vector>
 #include "MessageHeader.hpp"
-
+#include "CELLTimeStamp.hpp"
 
 //缓冲区最小单元大小
 #ifndef RECV_BUFF_SIZE
@@ -65,9 +66,12 @@ class EasyTcpServer
 private:
 	SOCKET _sock;
 	std::vector<ClientSocket*>_clients;
+	CELLTimeStamp _tTime;
+	int _recvCount;
 public:
 	EasyTcpServer() {
 		_sock = INVALID_SOCKET;
+		_recvCount = 0;
 	}
 	virtual ~EasyTcpServer() {
 		Close();
@@ -167,7 +171,7 @@ public:
 			NewUserJoin userJoin;
 			SendDataToAll(&userJoin);
 			_clients.push_back(new ClientSocket(cSock));
-			printf("Socket =<%d>新客户端加入：socket =  %d, IP:%s\n", _sock,(int)cSock, inet_ntoa(clientAddr.sin_addr));
+			printf("Socket =<%d>新客户端<%d>加入：socket =  %d, IP:%s\n", _sock,_clients.size(),(int)cSock, inet_ntoa(clientAddr.sin_addr));
 		}
 		return cSock;
 	}
@@ -243,6 +247,9 @@ public:
 			if (FD_ISSET(_sock, &fdRead)) {
 				FD_CLR(_sock, &fdRead);
 				Accept();
+				//如果有连接  先不处理数据
+
+				return true;
 			}
 
 			for (int n = (int)_clients.size() - 1; n >= 0; n--) {
@@ -331,6 +338,14 @@ public:
 	}
 	//响应网络消息
 	virtual void OnNetMsg(SOCKET cSock,DataHeader* header) {
+		_recvCount++;
+		auto t1 = _tTime.getElaspsedSecond();
+		if (t1 >= 1.0) {
+			printf("time<%lf>,<socket = %d> ,<clients = %d> ,_recvCount<%d>\n", t1,_sock,_clients.size(),_recvCount);
+			_recvCount = 0;
+			_tTime.update();
+
+		}
 		switch (header->cmd)
 		{
 		case CMD_LOGIN:
