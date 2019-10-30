@@ -3,9 +3,8 @@
 #define _EasyTcpServer_hpp_
 //预编译处理，保证该代码只被包含一次
 
-
 #ifdef _WIN32
-#define FD_SETSIZE  10000
+#define FD_SETSIZE  4024
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <WinSock2.h>
@@ -168,8 +167,8 @@ public:
 			printf("Socket =<%d>错误，接受到无效客户端SOCKET...\n",_sock);
 		}
 		else {
-			NewUserJoin userJoin;
-			SendDataToAll(&userJoin);
+			//NewUserJoin userJoin;
+			//SendDataToAll(&userJoin);
 			_clients.push_back(new ClientSocket(cSock));
 			printf("Socket =<%d>新客户端<%d>加入：socket =  %d, IP:%s\n", _sock,_clients.size(),(int)cSock, inet_ntoa(clientAddr.sin_addr));
 		}
@@ -353,8 +352,8 @@ public:
 			Login* login = (Login*)header;
 			//printf("收到客户端<socket = %d>请求：CMD_LOGIN,数据长度【%d】username[%s] password[%s]\n", cSock, login->datalength,login->username, login->password);
 			//忽略判断用户名密码是否正确的过程
-			LoginResult ret;
-			SendData(cSock, &ret);
+			/*LoginResult ret;
+			SendData(cSock, &ret);*/
 			
 		}
 		break;
@@ -362,8 +361,8 @@ public:
 			Logout* logout = (Logout*)header;
 			//printf("收到客户端<socket = %d>请求：CMD_LOGOUT,数据长度【%d】username[%s] \n", cSock, logout->datalength, logout->username);
 			//忽略判断用户名密码是否正确的过程
-			LogoutResult ret;
-			SendData(cSock, &ret);
+			/*LogoutResult ret;
+			SendData(cSock, &ret);*/
 		}
 						 break;
 		default: {

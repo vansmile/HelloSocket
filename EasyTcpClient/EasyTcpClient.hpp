@@ -46,7 +46,7 @@ public:
 			printf("错误，建立套接字失败...\n");
 			}
 			else {
-			printf("建立套接字成功...\n");
+			//printf("建立套接字成功...\n");
 		}
 	}
 	//连接服务器
@@ -70,7 +70,7 @@ public:
 			printf("<socket = %d>错误，连接Sokcet失败\n",_sock);
 		}
 		else {
-			printf("<socket = %d>连接服务器<%s:%d>成功...\n",_sock,ip,port);
+			//printf("<socket = %d>连接服务器<%s:%d>成功...\n",_sock,ip,port);
 		}
 	}
 

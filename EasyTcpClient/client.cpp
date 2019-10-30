@@ -21,47 +21,60 @@ void cmdThread() {
 	
 }
 
+const int cCount = 4000;	//客户端数量
+const int tCount = 4;  //线程数量
+EasyTcpClient* client[cCount];
 
-int main() {
-	const int cCount = 1000;
-	EasyTcpClient* client[cCount];
+void sendThread(int id) {   //4个线程 1-4
+	int c = cCount / tCount;
+	int begin = (id - 1) * c;
+	int end = id * c;
 	//栈内存
 	//EasyTcpClient client;
 	//client.initSocket();
-	for (int i = 0; i < cCount; i++) {
+	for (int i = begin; i < end; i++) {
 		client[i] = new EasyTcpClient();
-		if (!g_bRun) {
-			return 0;
-		}
 		client[i]->Connect("127.0.0.1", 4567);
+		printf("Connect = %d\n", i);
 	}
 	/*client.Connect("127.0.0.1", 4567);*/
 	//client.Connect("118.24.240.141", 4567);
-
-
-
-	//启动UI线程
-	std::thread t1(cmdThread);
-	t1.detach();
-
 	Login login;
 	strcpy(login.username, "fanxiao");
 	strcpy(login.password, "fanxiaomima");
 	while (g_bRun) {
 		//
 		//client.SendData(&login);
-		for (int i = 0; i < cCount; i++) {
-			
+		for (int i = begin; i < end; i++) {
+
 			client[i]->SendData(&login);
-			client[i]->OnRun();
+			//client[i]->OnRun();
 		}
 
 		//printf("空闲时间处理其他业务..\n");
 	}
-	for (int i = 0; i < cCount; i++) {
+	for (int i = begin; i < end; i++) {
 		client[i]->Close();
-		delete client[i];
 	}
+}
+
+int main() {
+	
+
+	//启动UI线程
+	std::thread t1(cmdThread);
+	t1.detach();
+
+	//启动发送线程
+	for (int i = 0; i < tCount; i++) {
+		std::thread t1(sendThread,i+1);
+		t1.detach();
+	}
+
+	while (g_bRun) {
+		Sleep(100);
+	}
+
 	printf("已退出，任务结束\n");
 
 	getchar();
