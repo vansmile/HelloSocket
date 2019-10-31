@@ -24,7 +24,7 @@ int main() {
 	server.Listen(5);
 	//char _recvBuf[128] = {};
 
-
+	server.Start();
 	//Æô¶¯UIÏß³Ì
 	std::thread t1(cmdThread);
 	t1.detach();

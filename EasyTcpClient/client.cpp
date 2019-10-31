@@ -21,7 +21,7 @@ void cmdThread() {
 	
 }
 
-const int cCount = 4000;	//客户端数量
+const int cCount = 10000;	//客户端数量
 const int tCount = 4;  //线程数量
 EasyTcpClient* client[cCount];
 
@@ -39,6 +39,10 @@ void sendThread(int id) {   //4个线程 1-4
 	}
 	/*client.Connect("127.0.0.1", 4567);*/
 	//client.Connect("118.24.240.141", 4567);
+
+	std::chrono::milliseconds t(3000);
+	std::this_thread::sleep_for(t);
+
 	Login login;
 	strcpy(login.username, "fanxiao");
 	strcpy(login.password, "fanxiaomima");
